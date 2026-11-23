@@ -1,0 +1,51 @@
+name: Build binaries
+
+on:
+  # Run manually from the Actions tab, or on every push to the amneziawg branch.
+  workflow_dispatch:
+  push:
+    branches: [amneziawg]
+
+permissions:
+  contents: read
+
+jobs:
+  binaries:
+    name: Build wg-portal binaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Get Version
+        shell: bash
+        run: echo "BUILD_VERSION=${GITHUB_REF_NAME}-${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Export binaries from images
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          target: binaries
+          outputs: type=local,dest=./binaries
+          build-args: |
+            BUILD_VERSION=${{ env.BUILD_VERSION }}
+
+      - name: Rename binaries
+        run: |
+          for file in binaries/linux*/wg-portal; do
+            mv "$file" "binaries/wg-portal_$(basename "$(dirname "$file")")"
+          done
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: binaries
+          path: binaries/wg-portal_linux*
+          retention-days: 30
