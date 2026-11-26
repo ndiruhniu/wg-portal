@@ -796,7 +796,8 @@ func (c LocalController) getOrCreateRoutingTableAndFwMark(
 	table = tableIn
 	fwmark = fwMarkIn
 
-	if fwmark == 0 {
+	// link can be nil if the physical interface was already removed (e.g. on interface deletion)
+	if fwmark == 0 && link != nil {
 		// generate a new (temporary) firewall mark based on the interface index
 		fwmark = uint32(c.cfg.Advanced.RouteTableOffset + link.Attrs().Index)
 	}
